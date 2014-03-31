@@ -25,6 +25,7 @@ type SlackApi struct {
 
 	Token string
 	Groups *GroupService
+	Auth *AuthService
 }
 
 func NewSlackApi(token string) *SlackApi {
@@ -37,6 +38,7 @@ func NewSlackApi(token string) *SlackApi {
 		Token: token,
 	}
 	api.Groups = &GroupService{ api: api }
+	api.Auth = &AuthService{ api: api }
 
 	return api;
 }
