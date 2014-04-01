@@ -1,15 +1,21 @@
 package main
 
-import "log"
 import (
+	"log"
 	"github.com/tappleby/slack-auth-proxy/slack"
 )
 
 func main() {
+	oauthClient := slack.NewOAuthClient("foo", "bar", "http://127.0.0.1:4180/oauth2/callback")
 
-	slackClient := slack.NewClient("xoxp-2176048118-2176048120-2250552618-570941")
+	loginUrl := oauthClient.LoginUrl("")
+	log.Println(loginUrl.String())
 
-	userAuth, _ :=  slackClient.Auth.Test()
+	authToken, err := oauthClient.RedeemCode("2176048118.2259982886.06aedf88fc");
 
-	log.Println(userAuth)
+	if err != nil {
+		panic(err)
+	}
+
+	log.Println(authToken)
 }
