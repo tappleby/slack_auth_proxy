@@ -20,12 +20,12 @@ func (s *AuthService) Test() (*Auth, error) {
 
 	req, _ := s.api.NewRequest(_GET, "auth.test", nil)
 
-	type AuthResp struct {
-		*Auth
+	type authResp struct {
+		Auth
 		Url string
 	}
 
-	auth := new(AuthResp)
+	auth := new(authResp)
 
 	_, err := s.api.Do(req, auth)
 
@@ -36,5 +36,5 @@ func (s *AuthService) Test() (*Auth, error) {
 	u, _ := url.Parse(auth.Url)
 	auth.TeamUrl = *u;
 
-	return auth.Auth, nil
+	return &auth.Auth, nil
 }
