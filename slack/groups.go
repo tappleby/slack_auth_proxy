@@ -1,4 +1,4 @@
-package main
+package slack
 
 type GroupService struct {
 	api *SlackApi
