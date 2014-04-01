@@ -1,7 +1,7 @@
 package slack
 
 type GroupService struct {
-	api *SlackApi
+	api *SlackClient
 }
 
 type Group struct {

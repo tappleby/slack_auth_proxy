@@ -5,7 +5,7 @@ import (
 )
 
 type AuthService struct {
-	api *SlackApi
+	api *SlackClient
 }
 
 type Auth struct {

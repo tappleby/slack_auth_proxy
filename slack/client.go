@@ -18,7 +18,7 @@ type Response struct {
 	*http.Response
 }
 
-type SlackApi struct {
+type SlackClient struct {
 	httpClient *http.Client
 
 	BaseUrl *url.URL
@@ -28,11 +28,11 @@ type SlackApi struct {
 	Auth *AuthService
 }
 
-func NewSlackApi(token string) *SlackApi {
+func NewClient(token string) *SlackClient {
 
 	baseURL, _ := url.Parse(slackBaseUrl)
 
-	api := &SlackApi{
+	api := &SlackClient{
 		httpClient: http.DefaultClient,
 		BaseUrl: baseURL,
 		Token: token,
@@ -43,7 +43,7 @@ func NewSlackApi(token string) *SlackApi {
 	return api;
 }
 
-func (s *SlackApi) NewRequest(method, path string, body interface {}) (*http.Request, error) {
+func (s *SlackClient) NewRequest(method, path string, body interface {}) (*http.Request, error) {
 	rel, err := url.Parse(path)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func (s *SlackApi) NewRequest(method, path string, body interface {}) (*http.Req
 	return req, nil
 }
 
-func (s *SlackApi) Do(req *http.Request, v interface {}) (*Response, error) {
+func (s *SlackClient) Do(req *http.Request, v interface {}) (*Response, error) {
 	resp, err := s.httpClient.Do(req)
 
 	if err != nil {
