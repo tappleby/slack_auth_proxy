@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http/httputil"
 	"strings"
+	"github.com/gorilla/securecookie"
+	"time"
 )
 
 const signInPath = "/oauth2/sign_in"
@@ -15,9 +17,13 @@ const oauthCallbackPath = "/oauth2/callback"
 
 
 type OAuthServer struct {
+	CookieKey string
+	Validator func(*slack.Auth, *UpstreamConfiguration) bool
+
 	slackOauth *slack.OAuthClient
 	serveMux	*http.ServeMux
 
+	secureCookie *securecookie.SecureCookie
 	upstreamsConfig UpstreamConfigurationMap
 }
 
@@ -41,14 +47,24 @@ func NewOauthServer(slackOauth *slack.OAuthClient, upstreams []*UpstreamConfigur
 		upstreamsPathMap[path] = upstream
 	}
 
+	var hashKey = []byte("very-secret")
+//	var blockKey = nil//[]byte("a-lot-secret")
+
+	secureCookie := securecookie.New(hashKey, nil)
+
 	return &OAuthServer{
+		CookieKey: "_slackauthproxy",
+		Validator: NewValidator(),
 		serveMux: serveMux,
 		slackOauth: slackOauth,
 		upstreamsConfig: upstreamsPathMap,
+		secureCookie: secureCookie,
 	}
 }
 
 func (s *OAuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	var ok bool
+
 	// check if this is a redirect back at the end of oauth
 	remoteIP := req.Header.Get("X-Real-IP")
 	if remoteIP == "" {
@@ -76,10 +92,25 @@ func (s *OAuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		upstreamConfig = s.upstreamsConfig[pattern]
 	}
 
-	if upstreamConfig != nil {
-		log.Println(upstreamConfig)
-	} else {
-		handler = http.NotFoundHandler()
+	if upstreamConfig == nil {
+		http.NotFound(rw, req)
+		return
+	}
+
+	if !ok {
+		cookie, _ := req.Cookie(s.CookieKey)
+
+		if cookie != nil {
+			auth := new(slack.Auth)
+			s.secureCookie.Decode(s.CookieKey, cookie.Value, &auth);
+			ok = s.Validator(auth, upstreamConfig)
+		}
+	}
+
+	if !ok {
+		log.Printf("invalid cookie")
+		s.handleSignIn(rw, req)
+		return
 	}
 
 	handler.ServeHTTP(rw, req)
@@ -123,13 +154,37 @@ func (s *OAuthServer) handleOAuthCallback(rw http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	log.Println(auth)
+	encoded, err := s.secureCookie.Encode(s.CookieKey, auth)
 
-	fmt.Fprintln(rw, "OK")
+	if err != nil {
+		log.Printf("Error encoding cookie %s", err.Error())
+		s.ErrorPage(rw, 500, "Internal Error", "Error encoding auth cookie")
+	}
+
+	s.SetCookie(rw, req, encoded)
 }
 
-func (p *OAuthServer) ErrorPage(rw http.ResponseWriter, code int, title string, message string) {
+func (s *OAuthServer) ErrorPage(rw http.ResponseWriter, code int, title string, message string) {
 	log.Printf("ErrorPage %d %s %s", code, title, message)
 	rw.WriteHeader(code)
 	fmt.Fprintln(rw, message)
+}
+
+func (s *OAuthServer) SetCookie(rw http.ResponseWriter, req *http.Request, val string) {
+
+	domain := strings.Split(req.Host, ":")[0] // strip the port (if any)
+// TODO: Enable cookie domain
+//	if *cookieDomain != "" && strings.HasSuffix(domain, *cookieDomain) {
+//		domain = *cookieDomain
+//	}
+	cookie := &http.Cookie{
+		Name:     s.CookieKey,
+		Value:   val,
+		Path:     "/",
+		Domain:   domain,
+		Expires:  time.Now().Add(time.Duration(168) * time.Hour), // 7 days
+		HttpOnly: true,
+		// Secure: req. ... ? set if X-Scheme: https ?
+	}
+	http.SetCookie(rw, cookie)
 }

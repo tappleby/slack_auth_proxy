@@ -19,3 +19,17 @@ func (c *UpstreamConfiguration) Parse() (err error) {
 
 	return
 }
+
+func (c *UpstreamConfiguration) FindUsername(name string) string {
+	var user = ""
+
+	for _, u := range c.Users {
+		if u == name {
+			user = u
+			break
+
+		}
+	}
+
+	return user
+}
