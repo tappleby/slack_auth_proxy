@@ -22,7 +22,7 @@ type Configuration struct {
 	// Slack Settings
 	ClientId 		string 						`yaml:"client_id"`
 	ClientSecret 	string 						`yaml:"client_secret"`
-	SlackTeam 		string 					 	`yaml:"team_id,omitempty"`
+	SlackTeam 		string 					 	`yaml:"slack_team,omitempty"`
 	AuthToken		string 					 	`yaml:"auth_token,omitempty"`
 
 }
