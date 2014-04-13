@@ -5,42 +5,29 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"flag"
 	"github.com/tappleby/slack-auth-proxy/slack"
 )
 
-var (
-	httpAddr                = flag.String("http-address", "127.0.0.1:4180", "<addr>:<port> to listen on for HTTP clients")
-	clientID                = flag.String("client-id", "", "Slack Oauth client id")
-	clientSecret            = flag.String("client-secret", "", "Slack oauth client secret")
-	slackTeamId		        = flag.String("slack-team", "", "authenticate against the given slack team id")
-)
-
-
 func main() {
 
-	flag.Parse()
+	config, err := LoadConfiguration()
 
-	if *clientID == "" {
-		log.Fatal("missing --client-id")
-	}
-	if *clientSecret == "" {
-		log.Fatal("missing --client-secret")
-	}
-
-	listener, err := net.Listen("tcp", *httpAddr)
 	if err != nil {
-		log.Fatalf("FATAL: listen (%s) failed - %s", *httpAddr, err.Error())
-	}
-	log.Printf("listening on %s", *httpAddr)
-
-	oauthClient := slack.NewOAuthClient(*clientID, *clientSecret, "http://127.0.0.1:4180/oauth2/callback")
-
-	if *slackTeamId != "" {
-		oauthClient.TeamId = *slackTeamId
+		log.Fatal("Error loading config: ", err)
 	}
 
-	oauthServer := NewOauthServer(oauthClient)
+	log.Println(config.Upstreams[0].HostURL)
+
+	listener, err := net.Listen("tcp", config.ServerAddr)
+	if err != nil {
+		log.Fatalf("FATAL: listen (%s) failed - %s", config.ServerAddr, err.Error())
+	}
+	log.Printf("listening on %s", config.ServerAddr)
+
+	oauthClient := slack.NewOAuthClient(config.ClientId, config.ClientSecret, config.RedirectUri)
+	oauthClient.TeamId = config.SlackTeam
+
+	oauthServer := NewOauthServer(oauthClient, config.Upstreams)
 
 	server := &http.Server{Handler: oauthServer}
 	err = server.Serve(listener)

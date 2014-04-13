@@ -5,6 +5,8 @@ import (
 	"github.com/tappleby/slack-auth-proxy/slack"
 	"net/http"
 	"fmt"
+	"net/http/httputil"
+	"strings"
 )
 
 const signInPath = "/oauth2/sign_in"
@@ -15,14 +17,34 @@ const oauthCallbackPath = "/oauth2/callback"
 type OAuthServer struct {
 	slackOauth *slack.OAuthClient
 	serveMux	*http.ServeMux
+
+	upstreamsConfig UpstreamConfigurationMap
 }
 
-func NewOauthServer(slackOauth *slack.OAuthClient) *OAuthServer {
+func NewOauthServer(slackOauth *slack.OAuthClient, upstreams []*UpstreamConfiguration) *OAuthServer {
 	serveMux := http.NewServeMux()
+
+	upstreamsPathMap := make(UpstreamConfigurationMap)
+
+	for _, upstream := range upstreams {
+		u := upstream.HostURL
+		path := u.Path
+		u.Path = ""
+
+		if path == "" {
+			path = "/"
+		}
+
+		log.Printf("mapping %s => %s", path, u)
+		serveMux.Handle(path, httputil.NewSingleHostReverseProxy(u))
+
+		upstreamsPathMap[path] = upstream
+	}
 
 	return &OAuthServer{
 		serveMux: serveMux,
 		slackOauth: slackOauth,
+		upstreamsConfig: upstreamsPathMap,
 	}
 }
 
@@ -45,7 +67,22 @@ func (s *OAuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	s.serveMux.ServeHTTP(rw, req)
+	handler, pattern := s.serveMux.Handler(req)
+
+ 	upstreamConfig := s.upstreamsConfig[pattern]
+
+	if upstreamConfig == nil {
+		pattern = strings.TrimPrefix(pattern, "/")
+		upstreamConfig = s.upstreamsConfig[pattern]
+	}
+
+	if upstreamConfig != nil {
+		log.Println(upstreamConfig)
+	} else {
+		handler = http.NotFoundHandler()
+	}
+
+	handler.ServeHTTP(rw, req)
 }
 
 func (s *OAuthServer) handleSignIn(rw http.ResponseWriter, req *http.Request) {
