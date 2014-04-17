@@ -9,12 +9,19 @@ import (
 	"strings"
 	"github.com/gorilla/securecookie"
 	"time"
+	"html/template"
 )
 
-const signInPath = "/oauth2/sign_in"
-const oauthStartPath = "/oauth2/start"
-const oauthCallbackPath = "/oauth2/callback"
+const (
+	signInPath = "/oauth2/sign_in"
+	oauthStartPath = "/oauth2/start"
+	oauthCallbackPath = "/oauth2/callback"
+	staticDir = "/_slackproxy"
+)
 
+var (
+	oauthTemplates = template.Must(template.ParseGlob("templates/*.html"))
+)
 
 type OAuthServer struct {
 	CookieKey string
@@ -22,6 +29,7 @@ type OAuthServer struct {
 
 	slackOauth *slack.OAuthClient
 	serveMux	*http.ServeMux
+	staticHandler http.Handler
 
 	secureCookie *securecookie.SecureCookie
 	upstreamsConfig UpstreamConfigurationMap
@@ -29,7 +37,6 @@ type OAuthServer struct {
 
 func NewOauthServer(slackOauth *slack.OAuthClient, upstreams []*UpstreamConfiguration) *OAuthServer {
 	serveMux := http.NewServeMux()
-
 	upstreamsPathMap := make(UpstreamConfigurationMap)
 
 	for _, upstream := range upstreams {
@@ -52,6 +59,7 @@ func NewOauthServer(slackOauth *slack.OAuthClient, upstreams []*UpstreamConfigur
 
 	secureCookie := securecookie.New(hashKey, nil)
 
+
 	return &OAuthServer{
 		CookieKey: "_slackauthproxy",
 		Validator: NewValidator(),
@@ -59,6 +67,7 @@ func NewOauthServer(slackOauth *slack.OAuthClient, upstreams []*UpstreamConfigur
 		slackOauth: slackOauth,
 		upstreamsConfig: upstreamsPathMap,
 		secureCookie: secureCookie,
+		staticHandler: http.FileServer(http.Dir("static")),
 	}
 }
 
@@ -72,19 +81,24 @@ func (s *OAuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 	log.Printf("%s %s %s", remoteIP, req.Method, req.URL.Path)
 
-	if req.URL.Path == signInPath {
+	reqPath := req.URL.Path
+
+	if reqPath == signInPath {
 		s.handleSignIn(rw, req)
 		return
-	} else if req.URL.Path == oauthStartPath {
+	} else if reqPath == oauthStartPath {
 		s.handleOAuthStart(rw, req)
 		return
-	} else if (req.URL.Path == oauthCallbackPath) {
+	} else if (reqPath == oauthCallbackPath) {
 		s.handleOAuthCallback(rw, req)
 		return
+	} else if (strings.HasPrefix(reqPath, staticDir)) {
+		req.URL.Path = strings.Replace(reqPath, staticDir, "", 1)
+		s.staticHandler.ServeHTTP(rw, req);
+		return;
 	}
 
 	handler, pattern := s.serveMux.Handler(req)
-
  	upstreamConfig := s.upstreamsConfig[pattern]
 
 	if upstreamConfig == nil {
@@ -103,6 +117,7 @@ func (s *OAuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		if cookie != nil {
 			auth := new(slack.Auth)
 			s.secureCookie.Decode(s.CookieKey, cookie.Value, &auth);
+
 			ok = s.Validator(auth, upstreamConfig)
 		}
 	}
@@ -117,7 +132,13 @@ func (s *OAuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (s *OAuthServer) handleSignIn(rw http.ResponseWriter, req *http.Request) {
+	t := struct {
+		Title string
+	}{
+		Title: "Sign in",
+	}
 
+	s.renderTemplate(rw, "sign_in", t)
 }
 
 func (s *OAuthServer) handleOAuthStart(rw http.ResponseWriter, req *http.Request) {
@@ -167,7 +188,15 @@ func (s *OAuthServer) handleOAuthCallback(rw http.ResponseWriter, req *http.Requ
 func (s *OAuthServer) ErrorPage(rw http.ResponseWriter, code int, title string, message string) {
 	log.Printf("ErrorPage %d %s %s", code, title, message)
 	rw.WriteHeader(code)
-	fmt.Fprintln(rw, message)
+	t := struct {
+			Title   string
+			Message string
+		}{
+		Title:   fmt.Sprintf("%d %s", code, title),
+		Message: message,
+	}
+
+	s.renderTemplate(rw, "error", t)
 }
 
 func (s *OAuthServer) SetCookie(rw http.ResponseWriter, req *http.Request, val string) {
@@ -186,5 +215,13 @@ func (s *OAuthServer) SetCookie(rw http.ResponseWriter, req *http.Request, val s
 		HttpOnly: true,
 		// Secure: req. ... ? set if X-Scheme: https ?
 	}
+
 	http.SetCookie(rw, cookie)
+}
+
+func (s *OAuthServer) renderTemplate(rw http.ResponseWriter, tmpl string, data interface {}) {
+	err := oauthTemplates.ExecuteTemplate(rw, tmpl+".html", data)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+	}
 }
