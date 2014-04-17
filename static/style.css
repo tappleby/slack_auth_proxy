@@ -50,3 +50,10 @@ body {
 .signin {
     padding: 0.5em;
 }
+
+@media (max-width: 767px) {
+    body {
+        margin-left: 15px;
+        margin-right: 15px;
+    }
+}
