@@ -131,18 +131,44 @@ func (s *OAuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	handler.ServeHTTP(rw, req)
 }
 
+func (s *OAuthServer) GetRedirect(req *http.Request) (string, error) {
+	err := req.ParseForm()
+
+	if err != nil {
+		return "", err
+	}
+
+	redirect := req.FormValue("rd")
+
+	if redirect == "" || redirect == signInPath {
+		redirect = "/"
+	}
+
+	return redirect, err
+}
+
 func (s *OAuthServer) handleSignIn(rw http.ResponseWriter, req *http.Request) {
+	s.ClearCookie(rw, req)
+
 	t := struct {
 		Title string
+		Redirect string
 	}{
 		Title: "Sign in",
+		Redirect: req.URL.RequestURI(),
 	}
 
 	s.renderTemplate(rw, "sign_in", t)
 }
 
 func (s *OAuthServer) handleOAuthStart(rw http.ResponseWriter, req *http.Request) {
-	http.Redirect(rw, req, s.slackOauth.LoginUrl("").String(), 302)
+	redirect, err := s.GetRedirect(req)
+	if err != nil {
+		s.ErrorPage(rw, 500, "Internal Error", err.Error())
+		return
+	}
+
+	http.Redirect(rw, req, s.slackOauth.LoginUrl(redirect).String(), 302)
 }
 
 func (s *OAuthServer) handleOAuthCallback(rw http.ResponseWriter, req *http.Request) {
@@ -182,7 +208,15 @@ func (s *OAuthServer) handleOAuthCallback(rw http.ResponseWriter, req *http.Requ
 		s.ErrorPage(rw, 500, "Internal Error", "Error encoding auth cookie")
 	}
 
+	redirect := req.Form.Get("state")
+	if redirect == "" {
+		redirect = "/"
+	}
+
+	log.Printf("authenticating %s completed", auth.Username)
+
 	s.SetCookie(rw, req, encoded)
+	http.Redirect(rw, req, redirect, 302)
 }
 
 func (s *OAuthServer) ErrorPage(rw http.ResponseWriter, code int, title string, message string) {
@@ -216,6 +250,22 @@ func (s *OAuthServer) SetCookie(rw http.ResponseWriter, req *http.Request, val s
 		// Secure: req. ... ? set if X-Scheme: https ?
 	}
 
+	http.SetCookie(rw, cookie)
+}
+
+func (s *OAuthServer) ClearCookie(rw http.ResponseWriter, req *http.Request) {
+	domain := strings.Split(req.Host, ":")[0]
+//	if *cookieDomain != "" && strings.HasSuffix(domain, *cookieDomain) {
+//		domain = *cookieDomain
+//	}
+	cookie := &http.Cookie{
+		Name:     s.CookieKey,
+		Value:    "",
+		Path:     "/",
+		Domain:   domain,
+		Expires:  time.Now().Add(time.Duration(1) * time.Hour * -1),
+		HttpOnly: true,
+	}
 	http.SetCookie(rw, cookie)
 }
 
