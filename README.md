@@ -79,3 +79,7 @@ Slack auth proxy responds directly to the following endpoints. All other endpoin
 
 - Add support for groups.
 - Manage the proxy via slack commands.
+
+## Preview
+
+![Preview](docs/preview.png)
