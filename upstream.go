@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/url"
+	"strings"
 )
 
 type UpstreamConfiguration struct {
@@ -13,6 +14,17 @@ type UpstreamConfiguration struct {
 }
 
 type UpstreamConfigurationMap map[string]*UpstreamConfiguration
+
+func (configMap UpstreamConfigurationMap) Find(pattern string) *UpstreamConfiguration {
+	upstreamConfig := configMap[pattern]
+
+	if upstreamConfig == nil {
+		pattern = strings.TrimPrefix(pattern, "/")
+		upstreamConfig = configMap[pattern]
+	}
+
+	return upstreamConfig
+}
 
 func (c *UpstreamConfiguration) Parse() (err error) {
 	c.HostURL, err = url.Parse(c.Host)

@@ -111,12 +111,7 @@ func (s *OAuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	handler, pattern := s.serveMux.Handler(req)
- 	upstreamConfig := s.upstreamsConfig[pattern]
-
-	if upstreamConfig == nil {
-		pattern = strings.TrimPrefix(pattern, "/")
-		upstreamConfig = s.upstreamsConfig[pattern]
-	}
+	upstreamConfig := s.upstreamsConfig.Find(pattern)
 
 	if upstreamConfig == nil {
 		http.NotFound(rw, req)
@@ -225,10 +220,20 @@ func (s *OAuthServer) handleOAuthCallback(rw http.ResponseWriter, req *http.Requ
 		redirect = "/"
 	}
 
-	log.Printf("authenticating %s completed", auth.Username)
+	upstreamConfig := s.upstreamsConfig.Find(redirect)
 
-	s.SetCookie(rw, req, encoded)
-	http.Redirect(rw, req, redirect, 302)
+	if upstreamConfig == nil {
+		s.ErrorPage(rw, 500, "Internal Error", fmt.Sprintf("Could not find upstream config for %s", redirect))
+		return
+	}
+
+	if s.Validator(auth, upstreamConfig) {
+		log.Printf("authenticating %s completed", auth.Username)
+		s.SetCookie(rw, req, encoded)
+		http.Redirect(rw, req, redirect, 302)
+	} else {
+		s.ErrorPage(rw, 403, "Permission Denied", "Invalid Account")
+	}
 }
 
 func (s *OAuthServer) ErrorPage(rw http.ResponseWriter, code int, title string, message string) {
