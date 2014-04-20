@@ -5,3 +5,8 @@
 
 # Mac
 .DS_Store
+/slack-auth-proxy
+
+/config.yaml
+
+/run.sh
