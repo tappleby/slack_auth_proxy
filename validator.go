@@ -6,7 +6,7 @@ import (
 
 func NewValidator() func(*slack.Auth, *UpstreamConfiguration) bool {
 	validator := func(auth *slack.Auth, upstream *UpstreamConfiguration) bool {
-		return upstream.FindUsername(auth.Username) != ""
+		return len(upstream.Users) == 0 || upstream.FindUsername(auth.Username) != ""
 	}
 	return validator
 }
