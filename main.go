@@ -16,7 +16,7 @@ import (
 const VERSION = "0.0.1"
 
 var (
-	defaultConfigFile, _ 	= filepath.Abs("./config.yaml")
+	defaultConfigFile, _ 	= filepath.Abs("./config.yml")
 	configFile           	= flag.String("config", defaultConfigFile, "path to config file.")
 
 	showVersion 			= flag.Bool("version", false, "print version string.")

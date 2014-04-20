@@ -7,6 +7,6 @@
 .DS_Store
 /slack-auth-proxy
 
-/config.yaml
+/config.yml
 
 /run.sh
