@@ -62,6 +62,13 @@ func main() {
 
 	oauthServer := NewOauthServer(oauthClient, config)
 
+	if config.HtPasswdFile != "" {
+		oauthServer.HtpasswdFile, err = NewHtpasswdFromFile(config.HtPasswdFile)
+		if err != nil {
+			log.Fatalf("FATAL: unable to open %s %s", config.HtPasswdFile, err.Error())
+		}
+	}
+
 	server := &http.Server{Handler: oauthServer}
 	err = server.Serve(listener)
 	if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {

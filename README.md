@@ -77,6 +77,5 @@ Slack auth proxy responds directly to the following endpoints. All other endpoin
 
 ## Future plans
 
-- Restore basic auth support.
 - Add support for groups.
 - Manage the proxy via slack commands.

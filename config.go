@@ -17,6 +17,7 @@ type Configuration struct {
 	ServerAddr		string 						`yaml:"server_addr,omitempty"`
 	Upstreams		[]*UpstreamConfiguration 	`yaml:"upstreams,omitempty"`
 	RedirectUri		string						`yaml:"redirect_uri,omitempty"`
+	PassBasicAuth	bool 					 	`yaml:"pass_basic_auth,omitempty"`
 
 	// Cookie settings
 	CookieDomain	string						`yaml:"cookie_domain,omitempty"`
@@ -30,6 +31,7 @@ type Configuration struct {
 	AuthToken		string 					 	`yaml:"auth_token,omitempty"`
 
 	//Other settings
+	HtPasswdFile	string						`yaml:"htpasswd_file,omitempty"`
 	Debug			bool 					 	`yaml:"debug,omitempty"`
 
 }
@@ -43,16 +45,16 @@ func LoadConfiguration(configFile string) (config *Configuration, err error) {
 		return
 	}
 
-	config = new(Configuration)
+	config = &Configuration{
+		ServerAddr: defaultServerAddr,
+		PassBasicAuth: true,
+	}
 
 
 	if err = yaml.Unmarshal(configBuf, &config); err != nil {
 		return
 	}
 
-	if config.ServerAddr == "" {
-		config.ServerAddr = defaultServerAddr
-	}
 
 	if config.ClientId == "" {
 		err = fmt.Errorf("Client id must be set in configuration")

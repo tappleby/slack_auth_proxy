@@ -27,6 +27,7 @@ var (
 type OAuthServer struct {
 	CookieKey string
 	Validator func(*slack.Auth, *UpstreamConfiguration) bool
+	HtpasswdFile* HtpasswdFile
 
 	slackOauth *slack.OAuthClient
 	serveMux	*http.ServeMux
@@ -121,6 +122,8 @@ func (s *OAuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	var user string
+
 	if !ok {
 		cookie, _ := req.Cookie(s.CookieKey)
 
@@ -129,6 +132,18 @@ func (s *OAuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			s.secureCookie.Decode(s.CookieKey, cookie.Value, &auth);
 
 			ok = s.Validator(auth, upstreamConfig)
+			user = auth.Username
+		}
+	}
+
+	if !ok {
+		user, basicOk := s.CheckBasicAuth(req)
+
+		if basicOk {
+			auth := &slack.Auth{
+				Username: user,
+			}
+			ok = s.Validator(auth, upstreamConfig)
 		}
 	}
 
@@ -136,6 +151,11 @@ func (s *OAuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		log.Printf("invalid cookie")
 		s.handleSignIn(rw, req)
 		return
+	}
+
+	if s.config.PassBasicAuth {
+		req.SetBasicAuth(user, "")
+		req.Header["X-Forwarded-User"] = []string{user}
 	}
 
 	handler.ServeHTTP(rw, req)
@@ -277,6 +297,29 @@ func (s *OAuthServer) ClearCookie(rw http.ResponseWriter, req *http.Request) {
 		HttpOnly: true,
 	}
 	http.SetCookie(rw, cookie)
+}
+
+func (p *OAuthServer) CheckBasicAuth(req *http.Request) (string, bool) {
+	if p.HtpasswdFile == nil {
+		return "", false
+	}
+	s := strings.SplitN(req.Header.Get("Authorization"), " ", 2)
+	if len(s) != 2 || s[0] != "Basic" {
+		return "", false
+	}
+	b, err := base64.StdEncoding.DecodeString(s[1])
+	if err != nil {
+		return "", false
+	}
+	pair := strings.SplitN(string(b), ":", 2)
+	if len(pair) != 2 {
+		return "", false
+	}
+	if p.HtpasswdFile.Validate(pair[0], pair[1]) {
+		log.Printf("authenticated %s via basic auth", pair[0])
+		return pair[0], true
+	}
+	return "", false
 }
 
 func (s *OAuthServer) renderTemplate(rw http.ResponseWriter, tmpl string, data interface {}) {
