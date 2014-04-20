@@ -1,5 +1,9 @@
 /* Credit to bootsnipp.com for the most css */
 
+html, body {
+    min-height: 100%;
+}
+
 body {
     background: url("pixel_weave.png");
 }
