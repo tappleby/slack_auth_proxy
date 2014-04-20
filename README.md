@@ -4,7 +4,7 @@ slack_auth_proxy
 
 A reverse proxy that provides authentication via your Slack.com Team (Based on [google_auth_proxy](https://github.com/bitly/google_auth_proxy))
 
-[![Build Status](https://travis-ci.org/tappleby/slack_auth_proxy.svg?branch=master)](https://travis-ci.org/tappleby/slack-auth-proxy)
+[![Build Status](https://travis-ci.org/tappleby/slack_auth_proxy.svg?branch=master)](https://travis-ci.org/tappleby/slack_auth_proxy)
 
 
 ## Architecture
