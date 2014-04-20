@@ -17,7 +17,11 @@ type Configuration struct {
 	ServerAddr		string 						`yaml:"server_addr,omitempty"`
 	Upstreams		[]*UpstreamConfiguration 	`yaml:"upstreams,omitempty"`
 	RedirectUri		string						`yaml:"redirect_uri,omitempty"`
+
+	// Cookie settings
 	CookieDomain	string						`yaml:"cookie_domain,omitempty"`
+	CookieHashKey	string						`yaml:"cookie_hash_key,omitempty"`
+	CookieBlockKey	string						`yaml:"cookie_block_key,omitempty"`
 
 	// Slack Settings
 	ClientId 		string 						`yaml:"client_id"`
@@ -54,6 +58,12 @@ func LoadConfiguration(configFile string) (config *Configuration, err error) {
 
 	if config.ClientSecret == "" {
 		err = fmt.Errorf("Client secret must be set in configuration")
+		return
+	}
+
+
+	if config.CookieHashKey == "" || config.CookieBlockKey == "" {
+		err = fmt.Errorf("cookie_hash_key and cookie_block_key must be set. please use ./slack-auth-proxy --keys to generate.")
 		return
 	}
 

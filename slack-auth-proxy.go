@@ -9,14 +9,18 @@ import (
 	"path/filepath"
 	"fmt"
 	"github.com/tappleby/slack-auth-proxy/slack"
+	"github.com/gorilla/securecookie"
+	"encoding/base64"
 )
 
 const VERSION = "0.0.1"
 
 var (
-	defaultConfigFile, _ = filepath.Abs("./config.yaml")
-	showVersion          = flag.Bool("version", false, "print version string")
-	configFile           = flag.String("config", defaultConfigFile, "path to config file.")
+	defaultConfigFile, _ 	= filepath.Abs("./config.yaml")
+	configFile           	= flag.String("config", defaultConfigFile, "path to config file.")
+
+	showVersion 			= flag.Bool("version", false, "print version string.")
+	showKeys 				= flag.Bool("keys", false, "prints encryption keys for secure cookie.")
 )
 
 func main() {
@@ -25,6 +29,16 @@ func main() {
 
 	if *showVersion {
 		fmt.Printf("slack-auth-proxy v%s\n", VERSION)
+		return
+	}
+
+	if *showKeys {
+		enc := base64.StdEncoding
+		hashKey := securecookie.GenerateRandomKey(64)
+		blockKey := securecookie.GenerateRandomKey(32)
+
+		fmt.Printf("cookie_hash_key: %s\n", enc.EncodeToString(hashKey))
+		fmt.Printf("cookie_block_key: %s\n", enc.EncodeToString(blockKey))
 		return
 	}
 

@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/securecookie"
 	"time"
 	"html/template"
+	"encoding/base64"
 )
 
 const (
@@ -56,10 +57,18 @@ func NewOauthServer(slackOauth *slack.OAuthClient, config *Configuration) *OAuth
 		upstreamsPathMap[path] = upstream
 	}
 
-	var hashKey = []byte("very-secret")
-//	var blockKey = nil//[]byte("a-lot-secret")
+	decode64 := func(name, s string) []byte {
+		dec := base64.StdEncoding
+		bs, err := dec.DecodeString(s)
+		if err != nil {
+			log.Fatalf("Could not decode %s key: %s", name, err)
+		}
+		return bs
+	}
+	hashKey := decode64("cookie_hash_key", config.CookieHashKey)
+	blockKey := decode64("cookie_block_key", config.CookieBlockKey)
 
-	secureCookie := securecookie.New(hashKey, nil)
+	secureCookie := securecookie.New(hashKey, blockKey)
 
 
 	return &OAuthServer{
