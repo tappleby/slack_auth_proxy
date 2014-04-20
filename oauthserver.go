@@ -87,11 +87,14 @@ func (s *OAuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	var ok bool
 
 	// check if this is a redirect back at the end of oauth
-	remoteIP := req.Header.Get("X-Real-IP")
-	if remoteIP == "" {
-		remoteIP = req.RemoteAddr
+
+	if s.config.Debug {
+		remoteIP := req.Header.Get("X-Real-IP")
+		if remoteIP == "" {
+			remoteIP = req.RemoteAddr
+		}
+		log.Printf("%s %s %s", remoteIP, req.Method, req.URL.Path)
 	}
-	log.Printf("%s %s %s", remoteIP, req.Method, req.URL.Path)
 
 	reqPath := req.URL.Path
 

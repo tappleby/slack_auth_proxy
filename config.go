@@ -29,6 +29,9 @@ type Configuration struct {
 	SlackTeam 		string 					 	`yaml:"slack_team,omitempty"`
 	AuthToken		string 					 	`yaml:"auth_token,omitempty"`
 
+	//Other settings
+	Debug			bool 					 	`yaml:"debug,omitempty"`
+
 }
 
 func LoadConfiguration(configFile string) (config *Configuration, err error) {
