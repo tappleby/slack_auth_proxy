@@ -5,7 +5,7 @@
 
 # Mac
 .DS_Store
-/slack-auth-proxy
+/slack_auth_proxy
 
 /config.yml
 

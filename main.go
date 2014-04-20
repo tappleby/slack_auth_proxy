@@ -8,7 +8,7 @@ import (
 	"flag"
 	"path/filepath"
 	"fmt"
-	"github.com/tappleby/slack-auth-proxy/slack"
+	"github.com/tappleby/slack_auth_proxy/slack"
 	"github.com/gorilla/securecookie"
 	"encoding/base64"
 )
@@ -28,7 +28,7 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Printf("slack-auth-proxy v%s\n", VERSION)
+		fmt.Printf("slack_auth_proxy v%s\n", VERSION)
 		return
 	}
 

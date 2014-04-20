@@ -1,7 +1,7 @@
 package slack_test
 
 import (
-	"github.com/tappleby/slack-auth-proxy/slack"
+	"github.com/tappleby/slack_auth_proxy/slack"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

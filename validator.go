@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/tappleby/slack-auth-proxy/slack"
+	"github.com/tappleby/slack_auth_proxy/slack"
 )
 
 func NewValidator() func(*slack.Auth, *UpstreamConfiguration) bool {

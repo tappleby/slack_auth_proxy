@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	"github.com/tappleby/slack-auth-proxy/slack"
+	"github.com/tappleby/slack_auth_proxy/slack"
 	"net/http"
 	"fmt"
 	"net/http/httputil"

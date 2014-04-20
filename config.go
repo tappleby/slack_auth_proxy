@@ -66,7 +66,7 @@ func LoadConfiguration(configFile string) (config *Configuration, err error) {
 
 
 	if config.CookieHashKey == "" || config.CookieBlockKey == "" {
-		err = fmt.Errorf("cookie_hash_key and cookie_block_key must be set. please use ./slack-auth-proxy --keys to generate.")
+		err = fmt.Errorf("cookie_hash_key and cookie_block_key must be set. please use ./slack_auth_proxy --keys to generate.")
 		return
 	}
 
