@@ -86,6 +86,7 @@ func NewOauthServer(slackOauth *slack.OAuthClient, config *Configuration) *OAuth
 
 func (s *OAuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	var ok bool
+	var user string
 
 	// check if this is a redirect back at the end of oauth
 
@@ -100,7 +101,30 @@ func (s *OAuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	reqPath := req.URL.Path
 
 	if reqPath == signInPath {
-		s.handleSignIn(rw, req)
+		redirect, err := s.GetRedirect(req)
+		if err != nil {
+			s.ErrorPage(rw, 500, "Internal Error", err.Error())
+			return
+		}
+
+		user, ok = s.ManualSignIn(rw, req)
+		if ok {
+			auth := &slack.Auth{
+				Username: user,
+			}
+			encoded, err := s.secureCookie.Encode(s.CookieKey, auth)
+
+			if err != nil {
+				log.Printf("Error encoding cookie %s", err.Error())
+				s.ErrorPage(rw, 500, "Internal Error", "Error encoding auth cookie")
+			} else {
+				s.SetCookie(rw, req, encoded)
+				http.Redirect(rw, req, redirect, 302)
+			}
+
+		} else {
+			s.handleSignIn(rw, req)
+		}
 		return
 	} else if reqPath == oauthStartPath {
 		s.handleOAuthStart(rw, req)
@@ -122,7 +146,6 @@ func (s *OAuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var user string
 
 	if !ok {
 		cookie, _ := req.Cookie(s.CookieKey)
@@ -182,10 +205,14 @@ func (s *OAuthServer) handleSignIn(rw http.ResponseWriter, req *http.Request) {
 
 	t := struct {
 		Title string
+		SignInUrl string
 		Redirect string
+		HtPasswd bool
 	}{
 		Title: "Sign in",
+		SignInUrl: signInPath,
 		Redirect: req.URL.RequestURI(),
+		HtPasswd: s.HtpasswdFile != nil,
 	}
 
 	s.renderTemplate(rw, "sign_in", t)
@@ -299,15 +326,15 @@ func (s *OAuthServer) ClearCookie(rw http.ResponseWriter, req *http.Request) {
 	http.SetCookie(rw, cookie)
 }
 
-func (p *OAuthServer) CheckBasicAuth(req *http.Request) (string, bool) {
-	if p.HtpasswdFile == nil {
+func (s *OAuthServer) CheckBasicAuth(req *http.Request) (string, bool) {
+	if s.HtpasswdFile == nil {
 		return "", false
 	}
-	s := strings.SplitN(req.Header.Get("Authorization"), " ", 2)
-	if len(s) != 2 || s[0] != "Basic" {
+	str := strings.SplitN(req.Header.Get("Authorization"), " ", 2)
+	if len(str) != 2 || str[0] != "Basic" {
 		return "", false
 	}
-	b, err := base64.StdEncoding.DecodeString(s[1])
+	b, err := base64.StdEncoding.DecodeString(str[1])
 	if err != nil {
 		return "", false
 	}
@@ -315,9 +342,26 @@ func (p *OAuthServer) CheckBasicAuth(req *http.Request) (string, bool) {
 	if len(pair) != 2 {
 		return "", false
 	}
-	if p.HtpasswdFile.Validate(pair[0], pair[1]) {
+	if s.HtpasswdFile.Validate(pair[0], pair[1]) {
 		log.Printf("authenticated %s via basic auth", pair[0])
 		return pair[0], true
+	}
+	return "", false
+}
+
+func (s *OAuthServer) ManualSignIn(rw http.ResponseWriter, req *http.Request) (string, bool) {
+	if req.Method != "POST" || s.HtpasswdFile == nil {
+		return "", false
+	}
+	user := req.FormValue("username")
+	passwd := req.FormValue("password")
+	if user == "" {
+		return "", false
+	}
+	// check auth
+	if s.HtpasswdFile.Validate(user, passwd) {
+		log.Printf("authenticated %s via manual sign in", user)
+		return user, true
 	}
 	return "", false
 }

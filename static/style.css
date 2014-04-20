@@ -52,12 +52,28 @@ body {
 }
 
 .signin {
-    padding: 0.5em;
+    padding: 1.0em 0.5em;
+}
+
+.signin-container {
+    margin-top: 100px;
+}
+
+.signin > form {
+    margin-top: 0.5em;
+    border-top: 1px solid #DBDBDB;
+    padding-top: 1.0em;
 }
 
 @media (max-width: 767px) {
     body {
         margin-left: 15px;
         margin-right: 15px;
+    }
+}
+
+@media (max-width: 479px) {
+    .signin-container {
+        margin-top: 40px;
     }
 }
