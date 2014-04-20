@@ -46,7 +46,7 @@ func main() {
 	oauthClient := slack.NewOAuthClient(config.ClientId, config.ClientSecret, config.RedirectUri)
 	oauthClient.TeamId = config.SlackTeam
 
-	oauthServer := NewOauthServer(oauthClient, config.Upstreams)
+	oauthServer := NewOauthServer(oauthClient, config)
 
 	server := &http.Server{Handler: oauthServer}
 	err = server.Serve(listener)

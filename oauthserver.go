@@ -33,13 +33,15 @@ type OAuthServer struct {
 
 	secureCookie *securecookie.SecureCookie
 	upstreamsConfig UpstreamConfigurationMap
+
+	config *Configuration
 }
 
-func NewOauthServer(slackOauth *slack.OAuthClient, upstreams []*UpstreamConfiguration) *OAuthServer {
+func NewOauthServer(slackOauth *slack.OAuthClient, config *Configuration) *OAuthServer {
 	serveMux := http.NewServeMux()
 	upstreamsPathMap := make(UpstreamConfigurationMap)
 
-	for _, upstream := range upstreams {
+	for _, upstream := range config.Upstreams {
 		u := upstream.HostURL
 		path := u.Path
 		u.Path = ""
@@ -68,6 +70,7 @@ func NewOauthServer(slackOauth *slack.OAuthClient, upstreams []*UpstreamConfigur
 		upstreamsConfig: upstreamsPathMap,
 		secureCookie: secureCookie,
 		staticHandler: http.FileServer(http.Dir("static")),
+		config: config,
 	}
 }
 
@@ -234,17 +237,11 @@ func (s *OAuthServer) ErrorPage(rw http.ResponseWriter, code int, title string, 
 }
 
 func (s *OAuthServer) SetCookie(rw http.ResponseWriter, req *http.Request, val string) {
-
-	domain := strings.Split(req.Host, ":")[0] // strip the port (if any)
-// TODO: Enable cookie domain
-//	if *cookieDomain != "" && strings.HasSuffix(domain, *cookieDomain) {
-//		domain = *cookieDomain
-//	}
 	cookie := &http.Cookie{
 		Name:     s.CookieKey,
 		Value:   val,
 		Path:     "/",
-		Domain:   domain,
+		Domain:   s.getCookieDomain(req),
 		Expires:  time.Now().Add(time.Duration(168) * time.Hour), // 7 days
 		HttpOnly: true,
 		// Secure: req. ... ? set if X-Scheme: https ?
@@ -254,15 +251,11 @@ func (s *OAuthServer) SetCookie(rw http.ResponseWriter, req *http.Request, val s
 }
 
 func (s *OAuthServer) ClearCookie(rw http.ResponseWriter, req *http.Request) {
-	domain := strings.Split(req.Host, ":")[0]
-//	if *cookieDomain != "" && strings.HasSuffix(domain, *cookieDomain) {
-//		domain = *cookieDomain
-//	}
 	cookie := &http.Cookie{
 		Name:     s.CookieKey,
 		Value:    "",
 		Path:     "/",
-		Domain:   domain,
+		Domain:   s.getCookieDomain(req),
 		Expires:  time.Now().Add(time.Duration(1) * time.Hour * -1),
 		HttpOnly: true,
 	}
@@ -274,4 +267,13 @@ func (s *OAuthServer) renderTemplate(rw http.ResponseWriter, tmpl string, data i
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func (s *OAuthServer) getCookieDomain(req *http.Request) string {
+	domain := strings.Split(req.Host, ":")[0]
+	if s.config.CookieDomain != "" && strings.HasSuffix(domain, s.config.CookieDomain) {
+		domain = s.config.CookieDomain
+	}
+
+	return domain
 }

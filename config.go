@@ -17,6 +17,7 @@ type Configuration struct {
 	ServerAddr		string 						`yaml:"server_addr,omitempty"`
 	Upstreams		[]*UpstreamConfiguration 	`yaml:"upstreams,omitempty"`
 	RedirectUri		string						`yaml:"redirect_uri,omitempty"`
+	CookieDomain	string						`yaml:"cookie_domain,omitempty"`
 
 	// Slack Settings
 	ClientId 		string 						`yaml:"client_id"`
