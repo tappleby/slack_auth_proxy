@@ -5,12 +5,31 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"flag"
+	"path/filepath"
+	"fmt"
 	"github.com/tappleby/slack-auth-proxy/slack"
+)
+
+const VERSION = "0.0.1"
+
+var (
+	defaultConfigFile, _ = filepath.Abs("./config.yaml")
+	showVersion          = flag.Bool("version", false, "print version string")
+	configFile           = flag.String("config", defaultConfigFile, "path to config file.")
 )
 
 func main() {
 
-	config, err := LoadConfiguration()
+	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("slack-auth-proxy v%s\n", VERSION)
+		return
+	}
+
+	// Load config
+	config, err := LoadConfiguration(*configFile)
 
 	if err != nil {
 		log.Fatal("Error loading config: ", err)

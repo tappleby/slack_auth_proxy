@@ -3,7 +3,6 @@ package main
 import (
 	yaml "gopkg.in/yaml.v1"
 	"io/ioutil"
-	"path/filepath"
 	"fmt"
 )
 
@@ -27,13 +26,12 @@ type Configuration struct {
 
 }
 
-func LoadConfiguration() (config *Configuration, err error) {
+func LoadConfiguration(configFile string) (config *Configuration, err error) {
 
-	configPath, _ := filepath.Abs("./config.yaml")
-	configBuf, err := ioutil.ReadFile(configPath)
+	configBuf, err := ioutil.ReadFile(configFile)
 
 	if err != nil {
-		err = fmt.Errorf("Failed to read configuration %s: %v", configPath, err)
+		err = fmt.Errorf("Failed to read configuration %s: %v", configFile, err)
 		return
 	}
 
