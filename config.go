@@ -64,6 +64,10 @@ func LoadConfiguration(configFile string) (config *Configuration, err error) {
 		return
 	}
 
+	if config.SlackTeam == "" {
+		err = fmt.Errorf("slack_team must be set in the configuration")
+		return
+	}
 
 	if config.CookieHashKey == "" || config.CookieBlockKey == "" {
 		err = fmt.Errorf("cookie_hash_key and cookie_block_key must be set. please use ./slack_auth_proxy --keys to generate.")
