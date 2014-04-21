@@ -208,11 +208,13 @@ func (s *OAuthServer) handleSignIn(rw http.ResponseWriter, req *http.Request) {
 		SignInUrl string
 		Redirect string
 		HtPasswd bool
+		BasicRequested bool
 	}{
 		Title: "Sign in",
 		SignInUrl: signInPath,
 		Redirect: req.URL.RequestURI(),
 		HtPasswd: s.HtpasswdFile != nil,
+		BasicRequested: req.FormValue("basic") == "1",
 	}
 
 	s.renderTemplate(rw, "sign_in", t)

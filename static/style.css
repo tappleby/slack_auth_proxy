@@ -59,10 +59,11 @@ body {
     margin-top: 100px;
 }
 
-.signin > form {
+.form-sep {
     margin-top: 0.5em;
     border-top: 1px solid #DBDBDB;
     padding-top: 1.0em;
+    overflow: hidden;
 }
 
 @media (max-width: 767px) {
