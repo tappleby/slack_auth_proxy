@@ -23,7 +23,7 @@ A reverse proxy that provides authentication via your Slack.com Team (Based on [
 
 1. [Install Go](http://golang.org/doc/install)
 2. Clone the project
-3. Build: `get get . && go build`
+3. Build: `go get . && go build`
 4. Run the executable: `./slack_auth_proxy`
 
 ## OAuth Configuration
